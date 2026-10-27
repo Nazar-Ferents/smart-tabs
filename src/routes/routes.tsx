@@ -21,6 +21,7 @@ export const routes = createBrowserRouter([
         {path:'auswahllisten',element:<TabPage/>},
         {path:'einkauf',element:<TabPage/>},
         {path:'rechn',element:<TabPage/>},
+        {path:'lagerverwaltung',element:<TabPage/>},
 
 
     ]
