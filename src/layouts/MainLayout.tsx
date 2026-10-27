@@ -5,7 +5,7 @@ import SideBar from "../components/SidebarComponents/SideBar.tsx";
 
 const MainLayout = () => {
     return (
-        <div className='flex bg-[#F1F5F8] w-full min-h-screen'>
+        <div className='flex bg-[#F1F5F8] w-full min-h-screen overflow-x-hidden'>
             <SideBar/>
             <div className="flex min-w-0 flex-1 flex-col">
                 <Header/>

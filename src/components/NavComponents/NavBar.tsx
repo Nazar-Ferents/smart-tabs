@@ -1,7 +1,8 @@
 import {initialTabs} from "../../data/tabs.ts";
-import {useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import TabContextMenu from "./TabContextMenu.tsx";
 import {NavLink} from "react-router-dom";
+import TabOverflow from "./TabOverflow.tsx";
 
 const NavBar = () => {
     const [tabs, setTabs] = useState(() => {
@@ -23,6 +24,8 @@ const NavBar = () => {
     const [contextMenuTabId, setContextMenuTabId] = useState<string | null>(null);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const contextMenuRef = useRef<HTMLDivElement>(null);
+    const navRef = useRef<HTMLDivElement>(null);
+    const [visibleCount, setVisibleCount] = useState(initialTabs.length);
 
     useEffect(() => {
         localStorage.setItem("tabs", JSON.stringify(tabs));
@@ -49,7 +52,12 @@ const NavBar = () => {
 
 
     const handleDrop = (targetTabId: string) => {
-        if (!draggedTabId || draggedTabId === targetTabId) return;
+        if (!draggedTabId) return;
+
+        if (draggedTabId === targetTabId) {
+            setDraggedTabId(null);
+            return;
+        }
 
         setTabs((currentTabs) => {
             const updatedTabs = [...currentTabs];
@@ -99,17 +107,52 @@ const NavBar = () => {
         });
     };
 
-    return (
-        <div className=' flex h-12 items-center bg-[#F1F5F8]'>
+    const TAB_WIDTH = 120;
+    const MORE_WIDTH = 40;
 
-            {tabs.map((tab) => {
+    const calculateVisibleTabs = useCallback(() => {
+        const container = navRef.current;
+        if (!container) return;
+
+        const availableWidth = container.clientWidth;
+        const maxTabs = Math.floor(availableWidth / TAB_WIDTH);
+
+        if (maxTabs >= tabs.length) {
+            setVisibleCount(tabs.length);
+        } else {
+            const count = Math.floor(
+                Math.max(0, availableWidth - MORE_WIDTH) / TAB_WIDTH
+            );
+
+            setVisibleCount(Math.min(count, tabs.length - 1));
+        }
+    }, [tabs.length]);
+
+    useEffect(() => {
+        const container = navRef.current;
+        if (!container) return;
+
+        const observer = new ResizeObserver(calculateVisibleTabs);
+
+        observer.observe(container);
+        calculateVisibleTabs();
+
+        return () => observer.disconnect();
+    }, [calculateVisibleTabs]);
+
+    const visibleTabs = tabs.slice(0, visibleCount);
+    const overflowTabs = tabs.slice(visibleCount);
+    return (
+        <div ref={navRef} className="relative flex h-12 w-full min-w-0 items-center bg-[#F1F5F8]">
+
+            {visibleTabs.map((tab) => {
                 const isDragged = draggedTabId === tab.id;
 
                 return (
                     <div
                         key={tab.id}
                         onContextMenu={(event) => handleContextMenu(event, tab.id)}
-                        className={`flex h-full items-center transition-colors duration-200 ${
+                        className={`flex h-full min-w-0 flex-1 items-center transition-colors duration-200 ${
                             isDragged
                                 ? "bg-[#F1F5F8]"
                                 : "bg-[#FEFEFE] hover:bg-[#F1F5F8] has-[a.active]:bg-[#F1F5F8]"
@@ -127,8 +170,9 @@ const NavBar = () => {
                             }}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={() => handleDrop(tab.id)}
+                            onDragEnd={() => setDraggedTabId(null)}
                             to={tab.url.startsWith("/") ? tab.url : `/${tab.url}`}
-                            className={`flex h-[48px] w-[148px] items-center justify-center p-[10px] font-poppins text-[14px] font-medium ${
+                            className={`flex h-12 w-full min-w-[120px] items-center justify-center p-[10px] font-poppins text-[14px] font-medium ${
                                 isDragged ? "bg-[#7F858D] text-white" : "text-[#7F858D]"
                             }`}
                         >
@@ -149,6 +193,7 @@ const NavBar = () => {
                     menuRef={contextMenuRef}
                 />
             )}
+            <TabOverflow tabs={overflowTabs} />
         </div>
     );
 };
