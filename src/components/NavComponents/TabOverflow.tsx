@@ -1,13 +1,14 @@
 
-import {useEffect, useRef, useState} from "react";
+import {type FC, useEffect, useRef, useState} from "react";
 import { NavLink } from "react-router-dom";
 import type { ITab } from "../../modules/ITabs.ts";
 
 interface TabOverflowProps {
     tabs: ITab[];
+    onRestore: (tabId: string) => void;
 }
 
-const TabOverflow = ({ tabs }: TabOverflowProps) => {
+const TabOverflow:FC<TabOverflowProps> = ({ tabs,onRestore  }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -45,14 +46,26 @@ const TabOverflow = ({ tabs }: TabOverflowProps) => {
             {isOpen && (
                 <div className="absolute right-0 top-full z-40 min-w-[180px] rounded-md border border-[#D9DDE2] bg-white py-1 shadow-md">
                     {tabs.map((tab) => (
-                        <NavLink
-                            key={tab.id}
-                            to={tab.url.startsWith("/") ? tab.url : `/${tab.url}`}
-                            onClick={() => setIsOpen(false)}
-                            className="block px-4 py-2 text-sm text-[#7F858D] hover:bg-[#F1F5F8]"
-                        >
-                            {tab.title}
-                        </NavLink>
+                        <div key={tab.id} className="flex items-center hover:bg-[#F1F5F8]">
+                            <NavLink
+                                to={tab.url.startsWith("/") ? tab.url : `/${tab.url}`}
+                                onClick={() => setIsOpen(false)}
+                                className="min-w-0 flex-1 px-4 py-2 text-sm text-[#7F858D]"
+                            >
+                                {tab.title}
+                            </NavLink>
+
+                            {tab.inOverflow && (
+                                <button
+                                    type="button"
+                                    title="Повернути вкладку"
+                                    onClick={() => onRestore(tab.id)}
+                                    className="px-3 py-2 text-[#4690E2] hover:bg-[#E2EAF3]"
+                                >
+                                    ↗
+                                </button>
+                            )}
+                        </div>
                     ))}
                 </div>
             )}

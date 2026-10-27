@@ -107,6 +107,9 @@ const NavBar = () => {
         });
     };
 
+    const activeTabs = tabs.filter((tab) => !tab.inOverflow);
+    const manuallyOverflowedTabs = tabs.filter((tab) => tab.inOverflow);
+
     const TAB_WIDTH = 120;
     const MORE_WIDTH = 40;
 
@@ -117,16 +120,16 @@ const NavBar = () => {
         const availableWidth = container.clientWidth;
         const maxTabs = Math.floor(availableWidth / TAB_WIDTH);
 
-        if (maxTabs >= tabs.length) {
-            setVisibleCount(tabs.length);
+        if (maxTabs >= activeTabs.length) {
+            setVisibleCount(activeTabs.length);
         } else {
             const count = Math.floor(
                 Math.max(0, availableWidth - MORE_WIDTH) / TAB_WIDTH
             );
 
-            setVisibleCount(Math.min(count, tabs.length - 1));
+            setVisibleCount(Math.min(count, Math.max(0, activeTabs.length - 1)));
         }
-    }, [tabs.length]);
+    }, [activeTabs.length]);
 
     useEffect(() => {
         const container = navRef.current;
@@ -140,8 +143,11 @@ const NavBar = () => {
         return () => observer.disconnect();
     }, [calculateVisibleTabs]);
 
-    const visibleTabs = tabs.slice(0, visibleCount);
-    const overflowTabs = tabs.slice(visibleCount);
+    const visibleTabs = activeTabs.slice(0, visibleCount);
+    const overflowTabs = [
+        ...activeTabs.slice(visibleCount),
+        ...manuallyOverflowedTabs,
+    ];
     return (
         <div ref={navRef} className="relative flex h-12 w-full min-w-0 items-center bg-[#F1F5F8]">
 
@@ -152,7 +158,7 @@ const NavBar = () => {
                     <div
                         key={tab.id}
                         onContextMenu={(event) => handleContextMenu(event, tab.id)}
-                        className={`flex h-full min-w-0 flex-1 items-center transition-colors duration-200 ${
+                        className={`group relative flex h-full min-w-0 flex-1 items-center transition-colors duration-200 ${
                             isDragged
                                 ? "bg-[#F1F5F8]"
                                 : "bg-[#FEFEFE] hover:bg-[#F1F5F8] has-[a.active]:bg-[#F1F5F8]"
@@ -172,12 +178,40 @@ const NavBar = () => {
                             onDrop={() => handleDrop(tab.id)}
                             onDragEnd={() => setDraggedTabId(null)}
                             to={tab.url.startsWith("/") ? tab.url : `/${tab.url}`}
-                            className={`flex h-12 w-full min-w-[120px] items-center justify-center p-[10px] font-poppins text-[14px] font-medium ${
-                                isDragged ? "bg-[#7F858D] text-white" : "text-[#7F858D]"
-                            }`}
+                            className={({ isActive }) =>
+                                `relative flex h-12 w-full min-w-[120px] items-center justify-center gap-2 border-t-2 p-[10px] font-poppins text-[14px] font-medium ${
+                                    isActive ? "border-t-[#4690E2]" : "border-t-transparent"
+                                } ${
+                                    isDragged ? "bg-[#7F858D] text-white" : "text-[#7F858D]"
+                                }`
+                            }
                         >
-                            {tab.title}
+
+                            <img
+                                src={tab.icon}
+                                alt=""
+                                className="h-[16px] w-[16px] shrink-0 object-contain"
+                            />
+                            {!tab.pinned && <span className="whitespace-nowrap">{tab.title}</span>}
                         </NavLink>
+                        {!tab.pinned && (
+                            <button
+                                type="button"
+                                title="Перемістити в меню"
+                                onClick={() => {
+                                    setTabs((currentTabs) =>
+                                        currentTabs.map((item) =>
+                                            item.id === tab.id
+                                                ? { ...item, inOverflow: true }
+                                                : item
+                                        )
+                                    );
+                                }}
+                                className="absolute right-2 top-1/2 z-20 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-[#EE3F3E] text-[16px] font-medium leading-none text-white opacity-0 transition-opacity group-hover:opacity-100"
+                            >
+                                ×
+                            </button>
+                        )}
                     </div>
                 );
             })}
@@ -193,7 +227,18 @@ const NavBar = () => {
                     menuRef={contextMenuRef}
                 />
             )}
-            <TabOverflow tabs={overflowTabs} />
+            <TabOverflow
+                tabs={overflowTabs}
+                onRestore={(tabId) => {
+                    setTabs((currentTabs) =>
+                        currentTabs.map((tab) =>
+                            tab.id === tabId
+                                ? { ...tab, inOverflow: false }
+                                : tab
+                        )
+                    );
+                }}
+            />
         </div>
     );
 };

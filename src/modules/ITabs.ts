@@ -3,4 +3,6 @@ export interface ITab  {
     title: string;
     url: string;
     pinned: boolean;
+    icon: string;
+    inOverflow?: boolean;
 };
